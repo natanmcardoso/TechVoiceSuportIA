@@ -1,0 +1,18 @@
+# Substitua <ID_DA_PLANILHA> pelo ID real da sua planilha do Google Sheets
+services:
+  - type: web
+    name: suporte-ai
+    env: python
+    buildCommand: "pip install -r requirements.txt"
+    startCommand: "uvicorn main:app --host 0.0.0.0 --port $PORT"
+    envVars:
+      - key: GLPI_URL
+        value: http://18.228.89.89/
+      - key: GLPI_USER
+        value: glpi
+      - key: GLPI_PASSWORD
+        value: glpi
+      - key: GOOGLE_SHEETS_CREDENTIALS_PATH
+        value: /app/credentials.json
+      - key: GOOGLE_SHEET_ID
+        value: <ID_DA_PLANILHA> 
