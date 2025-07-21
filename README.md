@@ -28,9 +28,9 @@ O Suporte.AI é um assistente de voz inteligente que entende problemas técnicos
 
 ### 🛠️ Recursos Avançados
 - 🔄 **Fallback Textual:** Transição para texto quando necessário
-- 🔗 **Integrações Robustas:** REST APIs e Google Sheets
+- 🔗 **Integrações Robustas:** REST APIs
 
-### 💰 Impacto Financeiro e Operacional
+### �� Impacto Financeiro e Operacional
 - 📉 **Redução de Tickets:** Menos chamados rotineiros
 - 🌐 **Disponibilidade:** Atendimento 24/7
 - 🚀 **Maior agilidade = maior satisfação do cliente**
@@ -84,15 +84,13 @@ O Suporte.AI é um assistente de voz inteligente que entende problemas técnicos
 ## 🏗️ Arquitetura Técnica
 - 🗣️ **VAP.AI:** Módulo de entrada e saída por voz
 - 🚀 **FastAPI:** API REST para criação de chamados
-- 📊 **Google Sheets:** Armazenamento de chamados estruturado
 - ☁️ **Render:** Deploy gratuito do backend com render.yaml
 
 ---
 
 ## 📂 Arquivos Desenvolvidos
-- `main.py` — API com FastAPI para integração com GLPI e Google Sheets
+- `main.py` — API com FastAPI para integração com GLPI
 - `glpi_api.py` — Cliente Python para comunicação com a API REST do GLPI
-- `google_sheets.py` — Integração Python com Google Sheets
 - `requirements.txt` — Dependências do projeto
 - `render.yaml` — Configuração para deploy no Render
 - `salvar_planilha.js` — Ação customizada do Botpress (exemplo)
@@ -127,8 +125,6 @@ O Suporte.AI é um assistente de voz inteligente que entende problemas técnicos
      - `GLPI_USER`
      - `GLPI_PASSWORD`
      - `GLPI_APP_TOKEN`
-     - `GOOGLE_SHEETS_CREDENTIALS_PATH`
-     - `GOOGLE_SHEET_ID`
 
 5. **Execute a API:**
    ```bash

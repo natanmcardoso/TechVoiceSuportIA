@@ -2,7 +2,7 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from datetime import datetime
 from glpi_api import GLPIClient
-from google_sheets import log_ticket_to_sheets
+# Removi a importação do Google Sheets
 
 app = FastAPI(title="Suporte.AI API")
 
@@ -20,8 +20,8 @@ class TicketRequest(BaseModel):
 @app.post("/create-ticket/")
 def create_ticket(request: TicketRequest):
     """
-    Endpoint para criar um chamado no GLPI e registrar no Google Sheets.
-    Recebe os dados do chamado, autentica no GLPI, cria o chamado e registra na planilha.
+    Endpoint para criar um chamado no GLPI.
+    Recebe os dados do chamado, autentica no GLPI, cria o chamado.
     """
     glpi = GLPIClient()
     glpi.authenticate()
@@ -31,13 +31,6 @@ def create_ticket(request: TicketRequest):
     if not ticket_id:
         glpi.logout()
         raise HTTPException(status_code=500, detail="Falha ao criar o chamado no GLPI.")
-    try:
-        timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-        # Registra o chamado na planilha Google Sheets
-        log_ticket_to_sheets(ticket_id, request.title, request.description, timestamp)
-    except Exception as e:
-        glpi.logout()
-        raise HTTPException(status_code=500, detail=f"Chamado criado, mas falha ao registrar no Google Sheets: {e}")
     glpi.logout()
     return {"message": "Chamado criado com sucesso!", "ticket_id": ticket_id}
 
