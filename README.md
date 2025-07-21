@@ -30,7 +30,7 @@ O Suporte.AI é um assistente de voz inteligente que entende problemas técnicos
 - 🔄 **Fallback Textual:** Transição para texto quando necessário
 - 🔗 **Integrações Robustas:** REST APIs
 
-### �� Impacto Financeiro e Operacional
+### 💰 Impacto Financeiro e Operacional
 - 📉 **Redução de Tickets:** Menos chamados rotineiros
 - 🌐 **Disponibilidade:** Atendimento 24/7
 - 🚀 **Maior agilidade = maior satisfação do cliente**
@@ -53,8 +53,8 @@ O Suporte.AI é um assistente de voz inteligente que entende problemas técnicos
 - 🗨️ Conversão de texto para voz (resposta natural da IA)
 - 🙋‍♂️ Permite que usuários falem com o assistente sem digitar.
 
-### 🖥️ API com FastAPI + Google Sheets
-- 📋 Registra automaticamente os chamados em planilhas Google.
+### 🖥️ API com FastAPI + GLPI
+- 📋 Registra automaticamente os chamados no sistema GLPI.
 - 🗄️ Alternativa de integração com banco de dados ou sistemas internos.
 
 ### 🖥️ Interface
