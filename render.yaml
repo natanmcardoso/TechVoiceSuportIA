@@ -4,11 +4,15 @@ services:
     name: suporte-ai
     env: python
     buildCommand: "pip install -r requirements.txt"
-    startCommand: "uvicorn main:app --host 0.0.0.0 --port $PORT"
+    startCommand: "uvicorn chamado_api:app --host 0.0.0.0 --port $PORT"
     envVars:
       - key: GLPI_URL
         value: http://18.228.89.89/
       - key: GLPI_USER
         value: glpi
       - key: GLPI_PASSWORD
-        value: glpi 
+        value: glpi
+      - key: GLPI_APP_TOKEN
+        value: seu_token_aqui
+      - key: API_TOKEN
+        value: seu_token_de_api_aqui 
