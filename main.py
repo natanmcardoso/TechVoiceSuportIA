@@ -71,7 +71,14 @@ async def create_chamado(request: ChamadoRequest):
         }
     }
     response = requests.post(f"{GLPI_URL}/Ticket", json=payload, headers=headers)
-    return response.json()
+    try:
+        return response.json()
+    except Exception:
+        return {
+            "status_code": response.status_code,
+            "text": response.text,
+            "error": "Erro ao decodificar resposta do GLPI. Veja o campo 'text' para detalhes."
+        }
 
 @app.post("/create-ticket/")
 def create_ticket(request: TicketRequest):
