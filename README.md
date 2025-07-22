@@ -91,10 +91,40 @@ O Suporte.AI é um assistente de voz inteligente que entende problemas técnicos
 ## 📂 Arquivos Desenvolvidos
 - `main.py` — API com FastAPI para integração com GLPI
 - `glpi_api.py` — Cliente Python para comunicação com a API REST do GLPI
+- `chamado_api.py` — API para criação automática de chamados no GLPI a partir de texto livre, com classificação automática de categoria
+- `criar_categorias_glpi.py` — Script para criação automática da árvore de categorias no GLPI
 - `requirements.txt` — Dependências do projeto
 - `render.yaml` — Configuração para deploy no Render
-- `salvar_planilha.js` — Ação customizada do Botpress (exemplo)
-- `chamado_api.py` — (Exemplo de API, pode ser substituído pelo main.py)
+
+---
+
+## ⚙️ Como usar o chamado_api.py
+
+1. **Configure o arquivo `.env`**
+   - Adicione a linha abaixo com o seu token de API do GLPI:
+     ```env
+     API_TOKEN=seu_token_de_api_aqui
+     ```
+
+2. **Execute a API**
+   ```bash
+   uvicorn chamado_api:app --reload
+   ```
+
+3. **Endpoint disponível:**
+   - `POST /chamado`
+     - Parâmetro: `texto` (str)
+     - Exemplo de uso:
+       ```json
+       {
+         "texto": "Preciso de ajuda com a impressora, está sem toner."
+       }
+       ```
+     - O endpoint irá classificar automaticamente a categoria e criar o chamado no GLPI.
+
+4. **Boas práticas de segurança**
+   - Nunca exponha seu `API_TOKEN` publicamente.
+   - Use variáveis de ambiente e arquivos `.env` para manter segredos fora do código-fonte.
 
 ---
 
