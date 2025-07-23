@@ -14,5 +14,3 @@ services:
         value: glpi
       - key: GLPI_APP_TOKEN
         value: seu_token_aqui
-      - key: API_TOKEN
-        value: seu_token_de_api_aqui 

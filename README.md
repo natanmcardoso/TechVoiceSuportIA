@@ -103,7 +103,7 @@ O Suporte.AI é um assistente de voz inteligente que entende problemas técnicos
 1. **Configure o arquivo `.env`**
    - Adicione a linha abaixo com o seu token de API do GLPI:
      ```env
-     API_TOKEN=seu_token_de_api_aqui
+     GLPI_APP_TOKEN=seu_token_de_api_aqui
      ```
 
 2. **Execute a API**
@@ -123,7 +123,7 @@ O Suporte.AI é um assistente de voz inteligente que entende problemas técnicos
      - O endpoint irá classificar automaticamente a categoria e criar o chamado no GLPI.
 
 4. **Boas práticas de segurança**
-   - Nunca exponha seu `API_TOKEN` publicamente.
+   - Nunca exponha seu `GLPI_APP_TOKEN` publicamente.
    - Use variáveis de ambiente e arquivos `.env` para manter segredos fora do código-fonte.
 
 ---
