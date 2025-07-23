@@ -7,10 +7,10 @@ services:
     startCommand: "uvicorn chamado_api:app --host 0.0.0.0 --port $PORT"
     envVars:
       - key: GLPI_URL
-        value: http://18.228.89.89/
+        sync: false
       - key: GLPI_USER
-        value: glpi
+        sync: false
       - key: GLPI_PASSWORD
-        value: glpi
+        sync: false
       - key: GLPI_APP_TOKEN
-        value: seu_token_aqui
+        sync: false

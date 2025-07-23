@@ -101,9 +101,16 @@ O Suporte.AI é um assistente de voz inteligente que entende problemas técnicos
 ## ⚙️ Como usar o chamado_api.py
 
 1. **Configure o arquivo `.env`**
-   - Adicione a linha abaixo com o seu token de API do GLPI:
+   - Copie o arquivo `.env.example` para `.env`:
+     ```bash
+     cp .env.example .env
+     ```
+   - Edite o arquivo `.env` e preencha as variáveis necessárias:
      ```env
      GLPI_APP_TOKEN=seu_token_de_api_aqui
+     GLPI_URL=sua_url_do_glpi_aqui
+     GLPI_USER=seu_usuario_aqui
+     GLPI_PASSWORD=sua_senha_aqui
      ```
 
 2. **Execute a API**
@@ -123,8 +130,10 @@ O Suporte.AI é um assistente de voz inteligente que entende problemas técnicos
      - O endpoint irá classificar automaticamente a categoria e criar o chamado no GLPI.
 
 4. **Boas práticas de segurança**
-   - Nunca exponha seu `GLPI_APP_TOKEN` publicamente.
+   - Nunca exponha seu `GLPI_APP_TOKEN` ou outras credenciais publicamente.
    - Use variáveis de ambiente e arquivos `.env` para manter segredos fora do código-fonte.
+   - Sempre use o arquivo `.env.example` como modelo, sem incluir credenciais reais.
+   - Certifique-se de que o arquivo `.env` está no `.gitignore` para evitar que seja enviado ao repositório.
 
 ---
 
@@ -150,11 +159,15 @@ O Suporte.AI é um assistente de voz inteligente que entende problemas técnicos
    ```
 
 4. **Configure o arquivo `.env`:**
-   - Preencha as variáveis de ambiente necessárias, incluindo:
-     - `GLPI_URL`
-     - `GLPI_USER`
-     - `GLPI_PASSWORD`
-     - `GLPI_APP_TOKEN`
+   - Copie o arquivo `.env.example` para `.env`:
+     ```bash
+     cp .env.example .env
+     ```
+   - Edite o arquivo `.env` e preencha as variáveis de ambiente necessárias:
+     - `GLPI_URL` - URL da sua instalação GLPI
+     - `GLPI_USER` - Usuário do GLPI
+     - `GLPI_PASSWORD` - Senha do usuário GLPI
+     - `GLPI_APP_TOKEN` - Token de aplicação do GLPI
 
 5. **Execute a API:**
    ```bash
