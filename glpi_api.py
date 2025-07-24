@@ -18,8 +18,7 @@ class GLPIClient:
         self.glpi_app_token = os.getenv('GLPI_APP_TOKEN')  # App Token da aplicação GLPI
         self.session_token = None
         self.headers = {
-            'Content-Type': 'application/json',
-            'App-Token': self.glpi_app_token  # Inclui o App Token no header
+            'Content-Type': 'application/json'
         }
 
     def authenticate(self):
@@ -30,7 +29,8 @@ class GLPIClient:
             url = f"{self.glpi_url}/apirest.php/initSession"
             params = {
                 'login': self.glpi_user,
-                'password': self.glpi_password
+                'password': self.glpi_password,
+                'app_token': self.glpi_app_token  # Envia app_token como parâmetro
             }
             response = requests.get(url, params=params, headers=self.headers)
             print("Resposta do GLPI:", response.text)  # Ajuda na depuração
@@ -93,4 +93,4 @@ class GLPIClient:
             self.session_token = None
             self.headers.pop('Session-Token', None)
         except Exception as e:
-            print(f'Erro ao encerrar sessão: {e}') 
+            print(f'Erro ao encerrar sessão: {e}')
