@@ -82,19 +82,49 @@ O Suporte.AI é um assistente de voz inteligente que entende problemas técnicos
 ---
 
 ## 🏗️ Arquitetura Técnica
+
+### Componentes Principais
 - 🗣️ **VAP.AI:** Módulo de entrada e saída por voz
 - 🚀 **FastAPI:** API REST para criação de chamados
+- 🔄 **GLPI Integration:** Integração com o sistema de chamados GLPI
 - ☁️ **Render:** Deploy gratuito do backend com render.yaml
+
+### Fluxo de Funcionamento
+1. O usuário descreve seu problema por voz ou texto
+2. O sistema converte a voz em texto (quando aplicável)
+3. A API processa o texto e identifica a categoria do problema
+4. O sistema cria automaticamente um chamado no GLPI com a categoria correta
+5. O usuário recebe confirmação da abertura do chamado
+
+### Classificação Automática de Categorias
+O sistema utiliza um algoritmo de classificação baseado em palavras-chave para identificar a categoria mais adequada para cada problema relatado. O processo funciona da seguinte forma:
+
+1. O texto do usuário é convertido para minúsculas
+2. O sistema compara o texto com as palavras-chave de cada categoria
+3. A categoria com mais correspondências é selecionada
+4. Se nenhuma categoria específica for identificada, o sistema usa a categoria padrão "Infraestrutura"
+
+Este método permite uma classificação rápida e eficiente sem a necessidade de modelos complexos de machine learning.
 
 ---
 
 ## 📂 Arquivos Desenvolvidos
-- `main.py` — API com FastAPI para integração com GLPI
-- `glpi_api.py` — Cliente Python para comunicação com a API REST do GLPI
-- `chamado_api.py` — API para criação automática de chamados no GLPI a partir de texto livre, com classificação automática de categoria
+
+### Arquivos Principais
+- `main.py` — API principal com FastAPI para integração com GLPI, incluindo endpoints para criação de chamados e classificação de categorias
+- `glpi_api.py` — Cliente Python para comunicação com a API REST do GLPI, responsável por autenticação, criação de chamados e gerenciamento de sessões
+- `chamado_api.py` — API para criação automática de chamados no GLPI a partir de texto livre, com classificação automática de categoria baseada em palavras-chave
+
+### Scripts Utilitários
 - `criar_categorias_glpi.py` — Script para criação automática da árvore de categorias no GLPI
-- `requirements.txt` — Dependências do projeto
-- `render.yaml` — Configuração para deploy no Render
+- `list_glpi_categories.py` — Script para listar categorias existentes no GLPI
+- `test_glpi_categories.py` — Script para testar a classificação de categorias
+
+### Arquivos de Configuração
+- `requirements.txt` — Dependências do projeto (FastAPI, Uvicorn, Requests, python-dotenv)
+- `render.yaml` — Configuração para deploy no Render com variáveis de ambiente seguras
+- `.env.example` — Modelo para configuração das variáveis de ambiente necessárias
+- `.gitignore` — Configuração para excluir arquivos sensíveis do controle de versão
 
 ---
 
@@ -142,7 +172,7 @@ O Suporte.AI é um assistente de voz inteligente que entende problemas técnicos
 1. **Clone o repositório:**
    ```bash
    git clone <URL_DO_SEU_REPOSITORIO>
-   cd Suporte.AI
+   cd TechVoiceSuportIA
    ```
 
 2. **Crie e ative um ambiente virtual:**
@@ -164,18 +194,32 @@ O Suporte.AI é um assistente de voz inteligente que entende problemas técnicos
      cp .env.example .env
      ```
    - Edite o arquivo `.env` e preencha as variáveis de ambiente necessárias:
-     - `GLPI_URL` - URL da sua instalação GLPI
-     - `GLPI_USER` - Usuário do GLPI
+     - `GLPI_URL` - URL da sua instalação GLPI (ex: https://glpi.seudominio.com)
+     - `GLPI_USER` - Usuário do GLPI com permissões para criar chamados
      - `GLPI_PASSWORD` - Senha do usuário GLPI
-     - `GLPI_APP_TOKEN` - Token de aplicação do GLPI
+     - `GLPI_APP_TOKEN` - Token de aplicação do GLPI (gerado nas configurações do GLPI)
 
-5. **Execute a API:**
+5. **Execute a API principal:**
    ```bash
    uvicorn main:app --reload
    ```
+   
+   **Ou execute a API de chamados:**
+   ```bash
+   uvicorn chamado_api:app --reload
+   ```
 
 6. **Acesse a documentação interativa:**
-   - [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)
+   - Para a API principal: [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)
+   - Para a API de chamados: [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)
+
+7. **Teste a criação de chamados:**
+   - Envie uma requisição POST para `/chamado` com um texto descrevendo o problema
+   - A API classificará automaticamente o problema e criará um chamado no GLPI
+   - Exemplo usando curl:
+     ```bash
+     curl -X POST "http://127.0.0.1:8000/chamado" -H "Content-Type: application/json" -d '{"texto": "Minha impressora está sem toner"}'
+     ```
 
 ---
 
@@ -183,3 +227,52 @@ O Suporte.AI é um assistente de voz inteligente que entende problemas técnicos
 
 - O arquivo `render.yaml` já está pronto para deploy gratuito no Render.com.
 - Basta conectar o repositório e seguir as instruções da plataforma.
+- Importante: Você precisará configurar as variáveis de ambiente no dashboard do Render:
+  - `GLPI_URL`
+  - `GLPI_USER`
+  - `GLPI_PASSWORD`
+  - `GLPI_APP_TOKEN`
+
+## 🔒 Segurança e Boas Práticas
+
+1. **Proteção de Credenciais**
+   - Nunca comite arquivos `.env` com credenciais reais no repositório.
+   - Use o arquivo `.env.example` como modelo, sem incluir credenciais reais.
+   - Certifique-se de que o arquivo `.env` está listado no `.gitignore`.
+   - No ambiente de produção, use variáveis de ambiente em vez de arquivos `.env`.
+
+2. **Remoção de Arquivos Sensíveis do Histórico**
+   - Se acidentalmente commitou arquivos sensíveis, use os seguintes comandos para removê-los:
+     ```bash
+     # Remover o arquivo .env do histórico do Git
+     git filter-branch --force --index-filter "git rm --cached --ignore-unmatch .env" --prune-empty --tag-name-filter cat -- --all
+     
+     # Forçar a atualização do repositório local
+     git reflog expire --expire=now --all
+     git gc --prune=now --aggressive
+     
+     # Forçar o push para o repositório remoto
+     git push origin --force --all
+     ```
+
+3. **Boas Práticas de Código**
+   - Mantenha o código modular e bem documentado.
+   - Adicione comentários explicativos em funções complexas.
+   - Siga as convenções de nomenclatura do Python (snake_case para variáveis e funções).
+   - Utilize tipagem quando possível para melhorar a legibilidade.
+
+## 🤝 Contribuições e Desenvolvimento Futuro
+
+### Como Contribuir
+1. Faça um fork do repositório
+2. Crie uma branch para sua feature (`git checkout -b feature/nova-funcionalidade`)
+3. Commit suas mudanças (`git commit -m 'Adiciona nova funcionalidade'`)
+4. Push para a branch (`git push origin feature/nova-funcionalidade`)
+5. Abra um Pull Request
+
+### Próximos Passos
+- **Integração com IA Avançada**: Implementar modelos de machine learning para melhorar a classificação de problemas.
+- **Interface Web**: Desenvolver uma interface web amigável para interação com o usuário.
+- **Análise de Sentimento**: Adicionar análise de sentimento para identificar a urgência dos chamados.
+- **Dashboard de Métricas**: Criar um dashboard para visualização de métricas de atendimento.
+- **Suporte a Múltiplos Idiomas**: Adicionar suporte para outros idiomas além do português.
