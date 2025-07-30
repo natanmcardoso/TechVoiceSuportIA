@@ -18,14 +18,11 @@ class GLPIClient:
         self.glpi_app_token = os.getenv('GLPI_APP_TOKEN')  # App Token da aplicação GLPI
         self.session_token = None
         
-        # Configura os headers básicos
+        # Configura os headers básicos com App-Token obrigatório
         self.headers = {
-            'Content-Type': 'application/json'
+            'Content-Type': 'application/json',
+            'App-Token': self.glpi_app_token
         }
-        
-        # Adiciona o App-Token se estiver disponível
-        if self.glpi_app_token:
-            self.headers['App-Token'] = self.glpi_app_token
         
         # Valida se tem credenciais suficientes para autenticação
         if not (self.glpi_user and self.glpi_password and self.glpi_app_token):
@@ -42,18 +39,13 @@ class GLPIClient:
             url = f"{self.glpi_url}/apirest.php/initSession"
             auth_headers = self.headers.copy()
             
-            # Configura a autenticação
-            # Autenticação básica (usuário e senha)
+            # Configura a autenticação básica mantendo o App-Token
             credentials = f"{self.glpi_user}:{self.glpi_password}"
             auth_string = base64.b64encode(credentials.encode()).decode()
             auth_headers['Authorization'] = f"Basic {auth_string}"
-            print("Usando autenticação básica")
+            auth_headers['App-Token'] = self.glpi_app_token
+            print("Usando autenticação básica com App-Token")
             
-            # Verifica se o App-Token está presente
-            if not self.glpi_app_token:
-                print('Erro: App-Token não configurado')
-                return False
-
             # Imprime os headers para debug
             print(f"Headers de autenticação: {auth_headers}")
             
