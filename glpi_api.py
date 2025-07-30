@@ -139,6 +139,6 @@ class GLPIClient:
                 print(f'Erro ao encerrar sessão. Status code: {response.status_code}')
                 print(f'Resposta de erro: {response.text}')
                 return False
-    except Exception as e:
-        print(f'Erro ao encerrar sessão: {str(e)}')
-        return False
+        except Exception as e:
+            print(f'Erro ao encerrar sessão: {str(e)}')
+            return False
