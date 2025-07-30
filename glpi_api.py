@@ -15,22 +15,18 @@ class GLPIClient:
         self.glpi_url = os.getenv('GLPI_URL')
         self.glpi_user = os.getenv('GLPI_USER')
         self.glpi_password = os.getenv('GLPI_PASSWORD')
-        self.glpi_user_token = os.getenv('GLPI_USER_TOKEN')
         self.glpi_app_token = os.getenv('GLPI_APP_TOKEN')  # App Token da aplicação GLPI
         self.session_token = None
         
         # Configura os headers básicos
         self.headers = {
-            'Content-Type': 'application/json'
+            'Content-Type': 'application/json',
+            'App-Token': self.glpi_app_token
         }
         
-        # Adiciona o App-Token se disponível
-        if self.glpi_app_token:
-            self.headers['App-Token'] = self.glpi_app_token
-            
         # Valida se tem credenciais suficientes para autenticação
-        if not self.glpi_user_token and not (self.glpi_user and self.glpi_password):
-            raise Exception("ERROR_LOGIN_PARAMETERS_MISSING: É necessário fornecer um user_token ou (usuário e senha)")
+        if not (self.glpi_user and self.glpi_password and self.glpi_app_token):
+            raise Exception("ERROR_LOGIN_PARAMETERS_MISSING: É necessário fornecer usuário, senha e app_token")
 
 
     def authenticate(self):
@@ -44,16 +40,11 @@ class GLPIClient:
             auth_headers = self.headers.copy()
             
             # Configura a autenticação
-            if self.glpi_user_token:
-                # Autenticação via user_token
-                auth_headers['Authorization'] = f"user_token {self.glpi_user_token}"
-                print("Usando autenticação via user_token")
-            else:
-                # Autenticação básica (usuário e senha)
-                credentials = f"{self.glpi_user}:{self.glpi_password}"
-                auth_string = base64.b64encode(credentials.encode()).decode()
-                auth_headers['Authorization'] = f"Basic {auth_string}"
-                print("Usando autenticação básica")
+            # Autenticação básica (usuário e senha)
+            credentials = f"{self.glpi_user}:{self.glpi_password}"
+            auth_string = base64.b64encode(credentials.encode()).decode()
+            auth_headers['Authorization'] = f"Basic {auth_string}"
+            print("Usando autenticação básica")
             
             response = requests.get(url, headers=auth_headers)
             print("Resposta do GLPI:", response.text)  # Ajuda na depuração
@@ -148,6 +139,6 @@ class GLPIClient:
                 print(f'Erro ao encerrar sessão. Status code: {response.status_code}')
                 print(f'Resposta de erro: {response.text}')
                 return False
-        except Exception as e:
-            print(f'Erro ao encerrar sessão: {str(e)}')
-             return False
+    except Exception as e:
+        print(f'Erro ao encerrar sessão: {str(e)}')
+        return False

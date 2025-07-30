@@ -103,13 +103,15 @@ async def create_chamado(request: ChamadoRequest):
     """
     try:
         intent = classify_intent(request.texto)
+        # Configurar headers básicos
         headers = {
             "Content-Type": "application/json",
+            "Authorization": f"Basic {requests.utils.b64encode(f'{os.getenv("GLPI_USER")}:{os.getenv("GLPI_PASSWORD")}'.encode()).decode()}",
             "App-Token": GLPI_APP_TOKEN
         }
         # Primeiro, iniciar uma sessão
         init_session_url = f"{GLPI_URL}/apirest.php/initSession"
-        init_response = requests.get(init_session_url, headers=headers, auth=(os.getenv('GLPI_USER'), os.getenv('GLPI_PASSWORD')))
+        init_response = requests.get(init_session_url, headers=headers)
         init_response.raise_for_status()
         session_data = init_response.json()
         session_token = session_data.get('session_token')
