@@ -20,9 +20,12 @@ class GLPIClient:
         
         # Configura os headers básicos
         self.headers = {
-            'Content-Type': 'application/json',
-            'App-Token': self.glpi_app_token
+            'Content-Type': 'application/json'
         }
+        
+        # Adiciona o App-Token se estiver disponível
+        if self.glpi_app_token:
+            self.headers['App-Token'] = self.glpi_app_token
         
         # Valida se tem credenciais suficientes para autenticação
         if not (self.glpi_user and self.glpi_password and self.glpi_app_token):
@@ -46,18 +49,30 @@ class GLPIClient:
             auth_headers['Authorization'] = f"Basic {auth_string}"
             print("Usando autenticação básica")
             
+            # Verifica se o App-Token está presente
+            if not self.glpi_app_token:
+                print('Erro: App-Token não configurado')
+                return False
+
+            # Imprime os headers para debug
+            print(f"Headers de autenticação: {auth_headers}")
+            
             response = requests.get(url, headers=auth_headers)
-            print("Resposta do GLPI:", response.text)  # Ajuda na depuração
+            print(f"Status code: {response.status_code}")
+            print(f"Resposta do GLPI: {response.text}")
             
             if response.status_code == 200:
-                data = response.json()
-                self.session_token = data.get('session_token')
-                if self.session_token:
-                    self.headers['Session-Token'] = self.session_token
-                    print('Autenticação GLPI realizada com sucesso!')
-                    return True
-                else:
-                    print('Erro: session_token não encontrado na resposta')
+                try:
+                    data = response.json()
+                    self.session_token = data.get('session_token')
+                    if self.session_token:
+                        self.headers['Session-Token'] = self.session_token
+                        print('Autenticação GLPI realizada com sucesso!')
+                        return True
+                    else:
+                        print('Erro: session_token não encontrado na resposta')
+                except Exception as e:
+                    print(f'Erro ao processar resposta JSON: {e}')
             else:
                 print(f'Erro na autenticação. Status code: {response.status_code}')
                 print(f'Resposta: {response.text}')
