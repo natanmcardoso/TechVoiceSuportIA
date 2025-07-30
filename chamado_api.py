@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 import requests
 import os
+import base64
 from dotenv import load_dotenv
 
 # Carrega variáveis do arquivo .env
@@ -75,7 +76,7 @@ async def create_chamado(texto: str):
         # Configurar headers básicos
         headers = {
             "Content-Type": "application/json",
-            "Authorization": f"Basic {requests.utils.b64encode(f'{os.getenv("GLPI_USER")}:{os.getenv("GLPI_PASSWORD")}'.encode()).decode()}",
+            "Authorization": f"Basic {base64.b64encode(f'{os.getenv("GLPI_USER")}:{os.getenv("GLPI_PASSWORD")}'.encode()).decode()}",
             "App-Token": GLPI_APP_TOKEN
         }
         
