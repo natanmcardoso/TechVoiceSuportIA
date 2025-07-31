@@ -24,11 +24,14 @@ class GLPIClient:
         if not (self.glpi_user and self.glpi_password):
             raise Exception("ERROR_LOGIN_PARAMETERS_MISSING: É necessário fornecer usuário e senha")
             
-        # Configura os headers básicos com App-Token
+        # Configura os headers básicos
         self.headers = {
-            'Content-Type': 'application/json',
-            'App-Token': self.glpi_app_token
+            'Content-Type': 'application/json'
         }
+        
+        # Adiciona o App-Token se disponível
+        if self.glpi_app_token:
+            self.headers['App-Token'] = self.glpi_app_token
 
 
     def authenticate(self):
@@ -39,7 +42,14 @@ class GLPIClient:
         try:
             import base64
             url = f"{self.glpi_url}/apirest.php/initSession"
-            auth_headers = self.headers.copy()
+            # Prepara os headers para autenticação
+            auth_headers = {
+                'Content-Type': 'application/json'
+            }
+            
+            # Adiciona o App-Token se disponível
+            if self.glpi_app_token:
+                auth_headers['App-Token'] = self.glpi_app_token
             
             # Configura a autenticação básica conforme documentação
             credentials = f"{self.glpi_user}:{self.glpi_password}"
