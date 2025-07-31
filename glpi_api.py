@@ -18,15 +18,17 @@ class GLPIClient:
         self.glpi_app_token = os.getenv('GLPI_APP_TOKEN')  # App Token da aplicação GLPI
         self.session_token = None
         
-        # Configura os headers básicos com App-Token obrigatório
+        # Valida se tem credenciais suficientes para autenticação
+        if not self.glpi_app_token:
+            raise Exception("ERROR_APP_TOKEN_MISSING: É necessário fornecer o app_token")
+        if not (self.glpi_user and self.glpi_password):
+            raise Exception("ERROR_LOGIN_PARAMETERS_MISSING: É necessário fornecer usuário e senha")
+            
+        # Configura os headers básicos com App-Token
         self.headers = {
             'Content-Type': 'application/json',
             'App-Token': self.glpi_app_token
         }
-        
-        # Valida se tem credenciais suficientes para autenticação
-        if not (self.glpi_user and self.glpi_password and self.glpi_app_token):
-            raise Exception("ERROR_LOGIN_PARAMETERS_MISSING: É necessário fornecer usuário, senha e app_token")
 
 
     def authenticate(self):
@@ -39,16 +41,16 @@ class GLPIClient:
             url = f"{self.glpi_url}/apirest.php/initSession"
             auth_headers = self.headers.copy()
             
-            # Configura a autenticação básica mantendo o App-Token
+            # Configura a autenticação básica conforme documentação
             credentials = f"{self.glpi_user}:{self.glpi_password}"
             auth_string = base64.b64encode(credentials.encode()).decode()
             auth_headers['Authorization'] = f"Basic {auth_string}"
-            auth_headers['App-Token'] = self.glpi_app_token
-            print("Usando autenticação básica com App-Token")
+            print("Usando autenticação básica")
             
             # Imprime os headers para debug
             print(f"Headers de autenticação: {auth_headers}")
             
+            print(f"Fazendo requisição para: {url}")
             response = requests.get(url, headers=auth_headers)
             print(f"Status code: {response.status_code}")
             print(f"Resposta do GLPI: {response.text}")
@@ -66,8 +68,11 @@ class GLPIClient:
                 except Exception as e:
                     print(f'Erro ao processar resposta JSON: {e}')
             else:
-                print(f'Erro na autenticação. Status code: {response.status_code}')
-                print(f'Resposta: {response.text}')
+                error_msg = f'Erro na autenticação. Status code: {response.status_code}\n'
+                error_msg += f'URL: {url}\n'
+                error_msg += f'Headers: {auth_headers}\n'
+                error_msg += f'Resposta: {response.text}'
+                print(error_msg)
             
             return False
         except Exception as e:
