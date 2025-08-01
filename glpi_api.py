@@ -44,24 +44,20 @@ class GLPIClient:
             import base64
             url = f"{self.glpi_url}/apirest.php/initSession"
             # Prepara os headers para autenticação
-            auth_headers = {
-                'Content-Type': 'application/json'
-            }
+            auth_headers = self.headers.copy()
             
-            # Adiciona o App-Token se disponível
-            if self.glpi_app_token:
-                auth_headers['App-Token'] = self.glpi_app_token
-            
-            # Tenta autenticação com user_token primeiro
+            # Adiciona a autenticação via user_token ou basic auth
             if self.glpi_user_token:
-                auth_headers['Authorization'] = f"user_token {self.glpi_user_token}"
                 print("Usando autenticação com user_token")
+                auth_headers['Authorization'] = f"user_token {self.glpi_user_token}"
             else:
-                # Fallback para autenticação básica
-                credentials = f"{self.glpi_user}:{self.glpi_password}"
-                auth_string = base64.b64encode(credentials.encode()).decode()
-                auth_headers['Authorization'] = f"Basic {auth_string}"
                 print("Usando autenticação básica")
+                auth_str = f"{self.glpi_user}:{self.glpi_password}"
+                auth_bytes = auth_str.encode('ascii')
+                auth_b64 = base64.b64encode(auth_bytes).decode('ascii')
+                auth_headers['Authorization'] = f"Basic {auth_b64}"
+            
+            # O App-Token já foi adicionado ao copiar self.headers
             
             # Imprime os headers para debug
             print(f"Headers de autenticação: {auth_headers}")
