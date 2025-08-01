@@ -1,16 +1,13 @@
-# Substitua <ID_DA_PLANILHA> pelo ID real da sua planilha do Google Sheets
 services:
   - type: web
     name: suporte-ai
     env: python
     buildCommand: "pip install -r requirements.txt"
-    startCommand: "uvicorn chamado_api:app --host 0.0.0.0 --port $PORT"
+    startCommand: "uvicorn main:app --host 0.0.0.0 --port $PORT"
     envVars:
       - key: GLPI_URL
         sync: false
-      - key: GLPI_USER
-        sync: false
-      - key: GLPI_PASSWORD
-        sync: false
       - key: GLPI_APP_TOKEN
+        sync: false
+      - key: GLPI_USER_TOKEN
         sync: false

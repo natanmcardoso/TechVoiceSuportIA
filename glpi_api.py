@@ -7,6 +7,7 @@ class GLPIClient:
     Cliente para integração com a API REST do GLPI.
     Responsável por autenticar, criar chamados e encerrar sessões.
     """
+
     def __init__(self):
         """
         Inicializa o cliente GLPI carregando variáveis de ambiente e configurando headers.
@@ -18,77 +19,67 @@ class GLPIClient:
         self.glpi_app_token = os.getenv('GLPI_APP_TOKEN')  # App Token da aplicação GLPI
         self.glpi_user_token = os.getenv('GLPI_USER_TOKEN')  # User Token para autenticação
         self.session_token = None
-        
+
         # Valida se tem credenciais suficientes para autenticação
         if not self.glpi_app_token:
             raise Exception("ERROR_APP_TOKEN_MISSING: É necessário fornecer o app_token")
         if not self.glpi_user_token and not (self.glpi_user and self.glpi_password):
             raise Exception("ERROR_LOGIN_PARAMETERS_MISSING: É necessário fornecer user_token ou usuário e senha")
-            
+
         # Configura os headers básicos
         self.headers = {
-            'Content-Type': 'application/json'
+            'Content-Type': 'application/json',
+            'App-Token': self.glpi_app_token
         }
-        
-        # Adiciona o App-Token se disponível
-        if self.glpi_app_token:
-            self.headers['App-Token'] = self.glpi_app_token
-
 
     def authenticate(self):
         """
         Autentica na API do GLPI e armazena o session_token.
-        A autenticação pode ser feita via user_token ou basic auth (usuário e senha).
+        Agora usa POST com user_token no body.
         """
         try:
-            import base64
             url = f"{self.glpi_url}/apirest.php/initSession"
-            # Prepara os headers para autenticação
             auth_headers = self.headers.copy()
-            
-            # Adiciona a autenticação via user_token ou basic auth
+
+            # Define payload com user_token ou login+senha
             if self.glpi_user_token:
-                print("Usando autenticação com user_token")
-                auth_headers['Authorization'] = f"user_token {self.glpi_user_token}"
+                print("Usando autenticação com user_token (via body)")
+                payload = {
+                    "user_token": self.glpi_user_token
+                }
+            elif self.glpi_user and self.glpi_password:
+                print("Usando autenticação com login e senha (via body)")
+                payload = {
+                    "login": self.glpi_user,
+                    "password": self.glpi_password
+                }
             else:
-                print("Usando autenticação básica")
-                auth_str = f"{self.glpi_user}:{self.glpi_password}"
-                auth_bytes = auth_str.encode('ascii')
-                auth_b64 = base64.b64encode(auth_bytes).decode('ascii')
-                auth_headers['Authorization'] = f"Basic {auth_b64}"
-            
-            # O App-Token já foi adicionado ao copiar self.headers
-            
-            # Imprime os headers para debug
-            print(f"Headers de autenticação: {auth_headers}")
-            
+                print("Nenhum método de autenticação válido encontrado.")
+                return False
+
             print(f"Fazendo requisição para: {url}")
-            response = requests.get(url, headers=auth_headers)
+            print(f"Headers de autenticação: {auth_headers}")
+            print(f"Payload: {payload}")
+
+            response = requests.post(url, json=payload, headers=auth_headers)
+
             print(f"Status code: {response.status_code}")
             print(f"Resposta do GLPI: {response.text}")
-            
+
             if response.status_code == 200:
-                try:
-                    data = response.json()
-                    self.session_token = data.get('session_token')
-                    if self.session_token:
-                        self.headers['Session-Token'] = self.session_token
-                        print('Autenticação GLPI realizada com sucesso!')
-                        return True
-                    else:
-                        print('Erro: session_token não encontrado na resposta')
-                except Exception as e:
-                    print(f'Erro ao processar resposta JSON: {e}')
+                data = response.json()
+                self.session_token = data.get('session_token')
+                if self.session_token:
+                    self.headers["Session-Token"] = self.session_token
+                    print("Autenticação GLPI realizada com sucesso!")
+                    return True
+                else:
+                    print("Erro: session_token não encontrado na resposta.")
             else:
-                error_msg = f'Erro na autenticação. Status code: {response.status_code}\n'
-                error_msg += f'URL: {url}\n'
-                error_msg += f'Headers: {auth_headers}\n'
-                error_msg += f'Resposta: {response.text}'
-                print(error_msg)
-            
+                print("Erro ao autenticar:", response.text)
             return False
         except Exception as e:
-            print(f'Erro na autenticação GLPI: {e}')
+            print(f"Erro na autenticação GLPI: {e}")
             return False
 
     def create_ticket(self, title, description, requester_email):
@@ -111,14 +102,14 @@ class GLPIClient:
                     }]
                 }
             }
-            
+
             print(f"Criando ticket com payload: {payload}")
             print(f"Headers utilizados: {self.headers}")
-            
+
             response = requests.post(url, json=payload, headers=self.headers)
             print(f"Status code: {response.status_code}")
             print(f"Resposta do GLPI: {response.text}")
-            
+
             if response.status_code == 201:
                 data = response.json()
                 ticket_id = data.get('id')
@@ -130,7 +121,7 @@ class GLPIClient:
             else:
                 print(f'Erro ao criar ticket. Status code: {response.status_code}')
                 print(f'Resposta de erro: {response.text}')
-            
+
             return None
         except Exception as e:
             print(f'Erro ao criar ticket: {str(e)}')
@@ -149,11 +140,11 @@ class GLPIClient:
             url = f"{self.glpi_url}/apirest.php/killSession"
             print(f"Encerrando sessão com token: {self.session_token}")
             print(f"Headers utilizados: {self.headers}")
-            
+
             response = requests.get(url, headers=self.headers)
             print(f"Status code: {response.status_code}")
             print(f"Resposta do GLPI: {response.text}")
-            
+
             if response.status_code == 200:
                 self.session_token = None
                 self.headers.pop('Session-Token', None)
