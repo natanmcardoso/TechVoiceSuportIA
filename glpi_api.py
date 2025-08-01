@@ -16,13 +16,14 @@ class GLPIClient:
         self.glpi_user = os.getenv('GLPI_USER')
         self.glpi_password = os.getenv('GLPI_PASSWORD')
         self.glpi_app_token = os.getenv('GLPI_APP_TOKEN')  # App Token da aplicação GLPI
+        self.glpi_user_token = os.getenv('GLPI_USER_TOKEN')  # User Token para autenticação
         self.session_token = None
         
         # Valida se tem credenciais suficientes para autenticação
         if not self.glpi_app_token:
             raise Exception("ERROR_APP_TOKEN_MISSING: É necessário fornecer o app_token")
-        if not (self.glpi_user and self.glpi_password):
-            raise Exception("ERROR_LOGIN_PARAMETERS_MISSING: É necessário fornecer usuário e senha")
+        if not self.glpi_user_token and not (self.glpi_user and self.glpi_password):
+            raise Exception("ERROR_LOGIN_PARAMETERS_MISSING: É necessário fornecer user_token ou usuário e senha")
             
         # Configura os headers básicos
         self.headers = {
@@ -51,11 +52,16 @@ class GLPIClient:
             if self.glpi_app_token:
                 auth_headers['App-Token'] = self.glpi_app_token
             
-            # Configura a autenticação básica conforme documentação
-            credentials = f"{self.glpi_user}:{self.glpi_password}"
-            auth_string = base64.b64encode(credentials.encode()).decode()
-            auth_headers['Authorization'] = f"Basic {auth_string}"
-            print("Usando autenticação básica")
+            # Tenta autenticação com user_token primeiro
+            if self.glpi_user_token:
+                auth_headers['Authorization'] = f"user_token {self.glpi_user_token}"
+                print("Usando autenticação com user_token")
+            else:
+                # Fallback para autenticação básica
+                credentials = f"{self.glpi_user}:{self.glpi_password}"
+                auth_string = base64.b64encode(credentials.encode()).decode()
+                auth_headers['Authorization'] = f"Basic {auth_string}"
+                print("Usando autenticação básica")
             
             # Imprime os headers para debug
             print(f"Headers de autenticação: {auth_headers}")
