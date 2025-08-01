@@ -49,7 +49,7 @@ class GLPIClient:
             # Adiciona a autenticação via user_token ou basic auth
             if self.glpi_user_token:
                 print("Usando autenticação com user_token")
-                auth_headers['Authorization'] = self.glpi_user_token
+                auth_headers['Authorization'] = f"user_token {self.glpi_user_token}"
             else:
                 print("Usando autenticação básica")
                 auth_str = f"{self.glpi_user}:{self.glpi_password}"
