@@ -11,3 +11,5 @@ services:
         sync: false
       - key: GLPI_USER_TOKEN
         sync: false
+      - key: VAPI_API_KEY
+        sync: false
