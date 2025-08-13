@@ -58,8 +58,8 @@ async def armazenar_infos(data: dict, authorization: str = Header(None)):
                 "name": f"Problema Técnico - {name}",
                 "content": ticket_description,
                 "priority": 3,
-                "entities_id": 1,  // SENAC Blumenau entity ID
-                "groups_id": [1]   // N1 group ID
+                "entities_id": [1],  # SENAC Blumenau entity ID
+                "groups_id": [1]   # N1 group ID
             }
         }
         headers = {
