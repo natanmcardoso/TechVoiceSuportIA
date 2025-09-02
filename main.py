@@ -3,6 +3,7 @@ from pydantic import BaseModel
 from glpi_api import GLPIClient  # Mantém o cliente GLPI
 from urllib.parse import urljoin
 import requests
+import json
 from fastapi import Request
 from dotenv import load_dotenv
 import os
@@ -136,15 +137,26 @@ def classify_intent(texto: str):
     return CATEGORIAS.get("infraestrutura", {"category_id": 1, "title": "Infraestrutura"})
 
 # Endpoints para Tools do VAPI (sem workflow)
+from fastapi import Request
+import json
+
 @app.post("/consultar_solucao")
 async def consultar_solucao(request: Request):
-    body = await request.body()  # Lê o raw body
-    logger.info(f"Raw payload recebido em /consultar_solucao: {body.decode('utf-8')}")
+    body = await request.body()
+    raw_payload = body.decode('utf-8')
+    logger.info(f"Raw payload recebido em /consultar_solucao: {raw_payload}")
     try:
-        consulta = Consulta(**await request.json())  # Tenta validar
+        data = json.loads(raw_payload)
+        # Extrai os argumentos do toolCall
+        arguments = data.get('message', {}).get('toolCalls', [{}])[0].get('function', {}).get('arguments', {})
+        consulta = Consulta(**arguments)  # Valida os argumentos com o modelo Consulta
+    except json.JSONDecodeError as e:
+        logger.error(f"Erro ao decodificar JSON: {str(e)}")
+        raise HTTPException(status_code=422, detail="Payload JSON inválido")
     except Exception as e:
         logger.error(f"Erro de validação em /consultar_solucao: {str(e)}")
         raise HTTPException(status_code=422, detail=str(e))
+
     session_token = iniciar_sessao()
     try:
         search_url = f"{GLPI_URL}/KnowbaseItem"
@@ -163,16 +175,23 @@ async def consultar_solucao(request: Request):
     finally:
         close_glpi_session(session_token)
 
-
 @app.post("/criar_ticket")
 async def criar_ticket(request: Request):
-    body = await request.body()  # Lê o raw body
-    logger.info(f"Raw payload recebido em /criar_ticket: {body.decode('utf-8')}")
+    body = await request.body()
+    raw_payload = body.decode('utf-8')
+    logger.info(f"Raw payload recebido em /criar_ticket: {raw_payload}")
     try:
-        ticket = Ticket(**await request.json())  # Tenta validar
+        data = json.loads(raw_payload)
+        # Extrai os argumentos do toolCall
+        arguments = data.get('message', {}).get('toolCalls', [{}])[0].get('function', {}).get('arguments', {})
+        ticket = Ticket(**arguments)  # Valida os argumentos com o modelo Ticket
+    except json.JSONDecodeError as e:
+        logger.error(f"Erro ao decodificar JSON: {str(e)}")
+        raise HTTPException(status_code=422, detail="Payload JSON inválido")
     except Exception as e:
         logger.error(f"Erro de validação em /criar_ticket: {str(e)}")
         raise HTTPException(status_code=422, detail=str(e))
+
     session_token = iniciar_sessao()
     try:
         ticket_url = f"{GLPI_URL}/Ticket"
