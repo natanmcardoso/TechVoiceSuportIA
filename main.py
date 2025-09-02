@@ -89,6 +89,14 @@ class Feedback(BaseModel):
     comentario: str = None
     ticket_id: str = None
 
+class ChamadoRequest(BaseModel):
+    texto: str
+
+class TicketRequest(BaseModel):
+    title: str
+    description: str
+    requester_email: str
+
 # Funções auxiliares
 def iniciar_sessao():
     url = f"{GLPI_URL}/apirest.php/initSession"
