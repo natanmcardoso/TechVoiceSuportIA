@@ -215,7 +215,11 @@ async def criar_ticket(request: Request):
             raise HTTPException(status_code=403, detail=f"Permissão negada no GLPI. Resposta: {response.text}")
         response.raise_for_status()
         ticket_id = response.json().get("id")
-        return {"message": "Ticket criado!", "ticket_id": ticket_id}
+        return {
+            "result": f"Ticket criado com sucesso com ID {ticket_id}",
+            "message": "Ticket criado!",
+            "ticket_id": ticket_id
+        }
     except requests.exceptions.RequestException as e:
         logger.error(f"Erro ao criar ticket: {str(e)} - Resposta: {getattr(e.response, 'text', 'Sem resposta')}")
         raise HTTPException(status_code=500, detail=f"Erro ao conectar ao GLPI: {str(e)}")
