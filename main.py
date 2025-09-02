@@ -135,7 +135,7 @@ def classify_intent(texto: str):
     return CATEGORIAS.get("infraestrutura", {"category_id": 1, "title": "Infraestrutura"})
 
 # Endpoints para Tools do VAPI (sem workflow)
-@app.post("/consultar_solucao")
+@app.post("/consultar_solucao", operation_id="get_solution")
 async def consultar_solucao(consulta: Consulta):
     logger.info(f"Payload recebido em /consultar_solucao: {consulta.dict()}")
     session_token = iniciar_sessao()
@@ -156,7 +156,7 @@ async def consultar_solucao(consulta: Consulta):
     finally:
         close_glpi_session(session_token)
 
-@app.post("/criar_ticket")
+@app.post("/criar_ticket", operation_id="create_ticket")
 async def criar_ticket(ticket: Ticket):
     logger.info(f"Payload recebido em /criar_ticket: {ticket.dict()}")
     session_token = iniciar_sessao()
@@ -191,7 +191,6 @@ async def criar_ticket(ticket: Ticket):
         raise HTTPException(status_code=500, detail=str(e))
     finally:
         close_glpi_session(session_token)
-
 
 @app.post("/criar_ticket")
 async def criar_ticket(ticket: Ticket):
