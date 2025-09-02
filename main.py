@@ -1,35 +1,108 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Header
 from pydantic import BaseModel
-from glpi_api import GLPIClient
+from glpi_api import GLPIClient  # Mantém o cliente GLPI
 import requests
 import os
-import base64
+import logging
 from dotenv import load_dotenv
 
-# Carregar variáveis de ambiente
+# Configuração inicial
 load_dotenv()
+app = FastAPI(title="TechVoiceSuportIA API")
 
-GLPI_URL = os.getenv('GLPI_URL')
-GLPI_APP_TOKEN = os.getenv('GLPI_APP_TOKEN')
-GLPI_USER_TOKEN = os.getenv('GLPI_USER_TOKEN')
+# Logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
-app = FastAPI(title="Suporte.AI API")
+# Variáveis de ambiente
+GLPI_URL = os.getenv("GLPI_URL")
+GLPI_APP_TOKEN = os.getenv("GLPI_APP_TOKEN")
+GLPI_USER_TOKEN = os.getenv("GLPI_USER_TOKEN")
+VAPI_API_KEY = os.getenv("VAPI_API_KEY")
 
-class TicketRequest(BaseModel):
-    title: str
-    description: str
-    requester_email: str
+# Validação inicial
+if not all([GLPI_APP_TOKEN, GLPI_USER_TOKEN, VAPI_API_KEY]):
+    raise RuntimeError("GLPI_APP_TOKEN, GLPI_USER_TOKEN e VAPI_API_KEY são obrigatórios no .env")
 
-class ChamadoRequest(BaseModel):
-    texto: str
-
-# --- Mapeamento de categorias ---
+# Mapeamento de categorias do GLPI
 CATEGORIAS = {
     "infraestrutura": {"category_id": 1, "title": "Infraestrutura"},
     "infraestrutura backup": {"category_id": 2, "title": "Infraestrutura > Backup"},
     "infraestrutura backup agendamento": {"category_id": 3, "title": "Infraestrutura > Backup > Agendamento"},
-    # (restante das categorias aqui, igual ao seu código atual)
+    "infraestrutura backup falha de backup": {"category_id": 4, "title": "Infraestrutura > Backup > Falha de Backup"},
+    "infraestrutura backup restauração": {"category_id": 5, "title": "Infraestrutura > Backup > Restauração"},
+    "infraestrutura computadores": {"category_id": 6, "title": "Infraestrutura > Computadores"},
+    "infraestrutura computadores desktops": {"category_id": 7, "title": "Infraestrutura > Computadores > Desktops"},
+    "infraestrutura computadores formatação reinstalação": {"category_id": 8, "title": "Infraestrutura > Computadores > Formatação/Reinstalação"},
+    "infraestrutura computadores notebooks": {"category_id": 9, "title": "Infraestrutura > Computadores > Notebooks"},
+    "infraestrutura computadores upgrade manutenção": {"category_id": 10, "title": "Infraestrutura > Computadores > Upgrade/Manutenção"},
+    "infraestrutura data center": {"category_id": 11, "title": "Infraestrutura > Data Center"},
+    "infraestrutura data center climatização": {"category_id": 12, "title": "Infraestrutura > Data Center > Climatização"},
+    "infraestrutura data center energia": {"category_id": 13, "title": "Infraestrutura > Data Center > Energia"},
+    "infraestrutura data center racks": {"category_id": 14, "title": "Infraestrutura > Data Center > Racks"},
+    "infraestrutura firewall security": {"category_id": 15, "title": "Infraestrutura > Firewall/Security"},
+    "infraestrutura firewall security bloqueio de sites": {"category_id": 16, "title": "Infraestrutura > Firewall/Security > Bloqueio de Sites"},
+    "infraestrutura firewall security regras de acesso": {"category_id": 17, "title": "Infraestrutura > Firewall/Security > Regras de Acesso"},
+    "infraestrutura impressoras": {"category_id": 18, "title": "Infraestrutura > Impressoras"},
+    "infraestrutura impressoras compartilhamento": {"category_id": 19, "title": "Infraestrutura > Impressoras > Compartilhamento"},
+    "infraestrutura impressoras configuração": {"category_id": 20, "title": "Infraestrutura > Impressoras > Configuração"},
+    "infraestrutura impressoras erro físico": {"category_id": 21, "title": "Infraestrutura > Impressoras > Erro Físico"},
+    "infraestrutura impressoras falta de tinta toner": {"category_id": 22, "title": "Infraestrutura > Impressoras > Falta de Tinta/Toner"},
+    "infraestrutura periféricos": {"category_id": 23, "title": "Infraestrutura > Periféricos"},
+    "infraestrutura periféricos monitor": {"category_id": 24, "title": "Infraestrutura > Periféricos > Monitor"},
+    "infraestrutura periféricos outros": {"category_id": 25, "title": "Infraestrutura > Periféricos > Outros"},
+    "infraestrutura periféricos outros dúvidas gerais": {"category_id": 26, "title": "Infraestrutura > Periféricos > Outros > Dúvidas Gerais"},
+    "infraestrutura periféricos outros solicitações diversas": {"category_id": 27, "title": "Infraestrutura > Periféricos > Outros > Solicitações Diversas"},
+    "infraestrutura periféricos teclado mouse": {"category_id": 28, "title": "Infraestrutura > Periféricos > Teclado/Mouse"},
+    "infraestrutura rede": {"category_id": 29, "title": "Infraestrutura > Rede"},
+    "infraestrutura rede cabeada": {"category_id": 30, "title": "Infraestrutura > Rede > Cabeada"},
+    "infraestrutura rede lentidão": {"category_id": 31, "title": "Infraestrutura > Rede > Lentidão"},
+    "infraestrutura rede sem conexão": {"category_id": 32, "title": "Infraestrutura > Rede > Sem Conexão"},
+    "infraestrutura rede vpn": {"category_id": 33, "title": "Infraestrutura > Rede > VPN"},
+    "infraestrutura rede wi-fi": {"category_id": 34, "title": "Infraestrutura > Rede > Wi-Fi"},
+    "infraestrutura servidores": {"category_id": 35, "title": "Infraestrutura > Servidores"},
+    "infraestrutura servidores backup de servidor": {"category_id": 36, "title": "Infraestrutura > Servidores > Backup de Servidor"},
+    "infraestrutura servidores linux": {"category_id": 37, "title": "Infraestrutura > Servidores > Linux"},
+    "infraestrutura servidores virtualização": {"category_id": 38, "title": "Infraestrutura > Servidores > Virtualização"},
+    "infraestrutura servidores windows": {"category_id": 39, "title": "Infraestrutura > Servidores > Windows"},
+    "infraestrutura software de infraestrutura": {"category_id": 40, "title": "Infraestrutura > Software de Infraestrutura"},
+    "infraestrutura software de infraestrutura antivírus": {"category_id": 41, "title": "Infraestrutura > Software de Infraestrutura > Antivírus"},
+    "infraestrutura software de infraestrutura ferramentas de monitoramento": {"category_id": 42, "title": "Infraestrutura > Software de Infraestrutura > Ferramentas de Monitoramento"},
+    "infraestrutura software de infraestrutura licenciamento": {"category_id": 43, "title": "Infraestrutura > Software de Infraestrutura > Licenciamento"},
+    "infraestrutura telefonia": {"category_id": 44, "title": "Infraestrutura > Telefonia"},
+    "infraestrutura telefonia convencional": {"category_id": 45, "title": "Infraestrutura > Telefonia > Convencional"},
+    "infraestrutura telefonia ip": {"category_id": 46, "title": "Infraestrutura > Telefonia > IP"},
+    "infraestrutura telefonia pabx": {"category_id": 47, "title": "Infraestrutura > Telefonia > PABX"}
 }
+
+# Modelos Pydantic
+class Consulta(BaseModel):
+    problema: str
+
+class Ticket(BaseModel):
+    nome: str
+    email: str
+    problema: str
+
+class Feedback(BaseModel):
+    nota: int
+    comentario: str = None
+    ticket_id: str = None
+
+# Funções auxiliares
+def iniciar_sessao():
+    url = f"{GLPI_URL}/apirest.php/initSession"
+    headers = {"Content-Type": "application/json", "App-Token": GLPI_APP_TOKEN}
+    payload = {"user_token": GLPI_USER_TOKEN}
+    response = requests.post(url, json=payload, headers=headers, timeout=10)
+    if response.status_code == 200:
+        return response.json().get("session_token")
+    logger.error(f"Erro ao iniciar sessão: {response.text}")
+    raise HTTPException(status_code=400, detail=f"Erro ao iniciar sessão: {response.text}")
+
+def close_glpi_session(session_token: str):
+    headers = {"App-Token": GLPI_APP_TOKEN, "Session-Token": session_token}
+    requests.get(f"{GLPI_URL}/killSession", headers=headers, timeout=10)
 
 def classify_intent(texto: str):
     texto = texto.lower()
@@ -38,21 +111,74 @@ def classify_intent(texto: str):
             return value
     return CATEGORIAS.get("infraestrutura", {"category_id": 1, "title": "Infraestrutura"})
 
-# --- Novo método para iniciar sessão com user_token ---
-def iniciar_sessao():
-    url = f"{GLPI_URL}/apirest.php/initSession"
-    headers = {
-        "Content-Type": "application/json",
-        "App-Token": GLPI_APP_TOKEN
-    }
-    payload = {"user_token": GLPI_USER_TOKEN}
-    response = requests.post(url, json=payload, headers=headers)
-    if response.status_code == 200:
-        return response.json().get("session_token")
-    else:
-        raise HTTPException(status_code=400, detail=f"Erro ao iniciar sessão: {response.text}")
+# Endpoints para Tools do VAPI (sem workflow)
+@app.post("/consultar_solucao")
+async def consultar_solucao(consulta: Consulta):
+    session_token = iniciar_sessao()
+    try:
+        headers = {"Content-Type": "application/json", "Session-Token": session_token, "App-Token": GLPI_APP_TOKEN}
+        search_data = {
+            "criteria": [{"field": "12", "searchtype": "contains", "value": consulta.problema}],
+            "range": "0-10"
+        }
+        response = requests.get(f"{GLPI_URL}/KnowbaseItem", params=search_data, headers=headers, timeout=10)
+        response.raise_for_status()
+        results = response.json()
+        return {"solucao": results[0]["answer"] if results and len(results) > 0 else None}
+    except Exception as e:
+        logger.error(f"Erro ao consultar solução: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        close_glpi_session(session_token)
 
-# --- Endpoint para criar chamado baseado em texto ---
+@app.post("/criar_ticket")
+async def criar_ticket(ticket: Ticket):
+    session_token = iniciar_sessao()
+    try:
+        headers = {"Content-Type": "application/json", "Session-Token": session_token, "App-Token": GLPI_APP_TOKEN}
+        intent = classify_intent(ticket.problema)
+        ticket_data = {
+            "input": {
+                "name": intent["title"],
+                "content": f"Usuário: {ticket.nome}\nEmail: {ticket.email}\nProblema: {ticket.problema}",
+                "itilcategories_id": intent["category_id"],
+                "type": 1,
+                "status": 1,
+                "entities_id": 1  # Ajuste conforme sua entidade no GLPI
+            }
+        }
+        response = requests.post(f"{GLPI_URL}/Ticket", json=ticket_data, headers=headers, timeout=10)
+        response.raise_for_status()
+        ticket_id = response.json().get("id")
+        return {"message": "Ticket criado!", "ticket_id": ticket_id}
+    except Exception as e:
+        logger.error(f"Erro ao criar ticket: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        close_glpi_session(session_token)
+
+@app.post("/coletar_feedback")
+async def coletar_feedback(feedback: Feedback):
+    session_token = iniciar_sessao()
+    try:
+        headers = {"Content-Type": "application/json", "Session-Token": session_token, "App-Token": GLPI_APP_TOKEN}
+        if feedback.ticket_id:
+            followup_data = {
+                "input": {
+                    "tickets_id": feedback.ticket_id,
+                    "content": f"Feedback: Nota {feedback.nota}/5. Comentário: {feedback.comentario or 'Nenhum'}"
+                }
+            }
+            response = requests.post(f"{GLPI_URL}/TicketFollowup", json=followup_data, headers=headers, timeout=10)
+            response.raise_for_status()
+        return {"message": "Feedback coletado!"}
+    except Exception as e:
+        logger.error(f"Erro ao coletar feedback: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        close_glpi_session(session_token)
+
+# Endpoints existentes do seu código
 @app.post("/chamado")
 async def create_chamado(request: ChamadoRequest):
     try:
@@ -76,7 +202,7 @@ async def create_chamado(request: ChamadoRequest):
             }
         }
 
-        ticket_response = requests.post(ticket_url, json=payload, headers=headers)
+        ticket_response = requests.post(ticket_url, json=payload, headers=headers, timeout=10)
 
         # Encerrar sessão
         requests.get(f"{GLPI_URL}/apirest.php/killSession", headers=headers)
@@ -86,6 +212,7 @@ async def create_chamado(request: ChamadoRequest):
         except Exception:
             return {"status_code": ticket_response.status_code, "text": ticket_response.text}
     except Exception as e:
+        logger.error(f"Erro ao criar chamado: {str(e)}")
         return {"error": str(e)}
 
 @app.post("/create-ticket/")
@@ -101,6 +228,7 @@ def create_ticket(request: TicketRequest):
     glpi.logout()
     return {"message": "Chamado criado com sucesso!", "ticket_id": ticket_id}
 
+# Endpoints de teste
 @app.get("/health")
 def health_check():
     return {"status": "ok"}
@@ -114,21 +242,9 @@ def test_env():
 
 @app.get("/test-auth")
 def test_auth():
-    """
-    Testa autenticação via user_token (POST).
-    """
     try:
-        url = f"{GLPI_URL}/apirest.php/initSession"
-        headers = {
-            "Content-Type": "application/json",
-            "App-Token": GLPI_APP_TOKEN
-        }
-        payload = {"user_token": GLPI_USER_TOKEN}
-        response = requests.post(url, json=payload, headers=headers)
-        return {
-            "status_code": response.status_code,
-            "response": response.json() if response.status_code == 200 else response.text
-        }
+        session_token = iniciar_sessao()
+        return {"success": True, "session_token": session_token[:8] + "*****"}
     except Exception as e:
         return {"error": str(e)}
 
@@ -142,9 +258,6 @@ def test_classify(texto: str):
 
 @app.get("/test-direct-ticket")
 def test_direct_ticket(texto: str):
-    """
-    Cria ticket diretamente sem GLPIClient, usando POST com user_token.
-    """
     try:
         intent = classify_intent(texto)
         session_token = iniciar_sessao()
@@ -166,7 +279,7 @@ def test_direct_ticket(texto: str):
             }
         }
 
-        ticket_response = requests.post(ticket_url, json=payload, headers=headers)
+        ticket_response = requests.post(ticket_url, json=payload, headers=headers, timeout=10)
 
         # Encerra sessão
         requests.get(f"{GLPI_URL}/apirest.php/killSession", headers=headers)
@@ -197,9 +310,6 @@ def test_glpi_api():
 
 @app.get("/test-init-session")
 def test_init_session():
-    """
-    Apenas chama iniciar_sessao() e retorna resultado.
-    """
     try:
         session_token = iniciar_sessao()
         return {"success": True, "session_token": session_token[:8] + "*****" if session_token else None}
