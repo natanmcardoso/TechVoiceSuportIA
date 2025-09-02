@@ -147,9 +147,8 @@ async def consultar_solucao(request: Request):
     logger.info(f"Raw payload recebido em /consultar_solucao: {raw_payload}")
     try:
         data = json.loads(raw_payload)
-        # Extrai os argumentos do toolCall
         arguments = data.get('message', {}).get('toolCalls', [{}])[0].get('function', {}).get('arguments', {})
-        consulta = Consulta(**arguments)  # Valida os argumentos com o modelo Consulta
+        consulta = Consulta(**arguments)
     except json.JSONDecodeError as e:
         logger.error(f"Erro ao decodificar JSON: {str(e)}")
         raise HTTPException(status_code=422, detail="Payload JSON inválido")
@@ -168,7 +167,8 @@ async def consultar_solucao(request: Request):
         response = requests.get(search_url, params=search_data, headers=headers, timeout=10)
         response.raise_for_status()
         results = response.json()
-        return {"solucao": results[0]["answer"] if results and len(results) > 0 else None}
+        solucao = results[0]["answer"] if results and len(results) > 0 else None
+        return f"success: Solução encontrada: {solucao}" if solucao else "failure: Nenhuma solução encontrada"
     except Exception as e:
         logger.error(f"Erro ao consultar solução: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -182,9 +182,8 @@ async def criar_ticket(request: Request):
     logger.info(f"Raw payload recebido em /criar_ticket: {raw_payload}")
     try:
         data = json.loads(raw_payload)
-        # Extrai os argumentos do toolCall
         arguments = data.get('message', {}).get('toolCalls', [{}])[0].get('function', {}).get('arguments', {})
-        ticket = Ticket(**arguments)  # Valida os argumentos com o modelo Ticket
+        ticket = Ticket(**arguments)
     except json.JSONDecodeError as e:
         logger.error(f"Erro ao decodificar JSON: {str(e)}")
         raise HTTPException(status_code=422, detail="Payload JSON inválido")
@@ -215,7 +214,7 @@ async def criar_ticket(request: Request):
             raise HTTPException(status_code=403, detail=f"Permissão negada no GLPI. Resposta: {response.text}")
         response.raise_for_status()
         ticket_id = response.json().get("id")
-        return f"Ticket criado com sucesso com ID {ticket_id}"  # Retorno simples como string
+        return f"success: Ticket criado com sucesso com ID {ticket_id}"  # Retorno como string com "success" explícito
     except requests.exceptions.RequestException as e:
         logger.error(f"Erro ao criar ticket: {str(e)} - Resposta: {getattr(e.response, 'text', 'Sem resposta')}")
         raise HTTPException(status_code=500, detail=f"Erro ao conectar ao GLPI: {str(e)}")
@@ -224,6 +223,7 @@ async def criar_ticket(request: Request):
         raise HTTPException(status_code=500, detail=str(e))
     finally:
         close_glpi_session(session_token)
+
 
 @app.post("/coletar_feedback")
 async def coletar_feedback(feedback: Feedback):
