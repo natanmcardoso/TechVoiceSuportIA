@@ -137,6 +137,7 @@ def classify_intent(texto: str):
 # Endpoints para Tools do VAPI (sem workflow)
 @app.post("/consultar_solucao")
 async def consultar_solucao(consulta: Consulta):
+    logger.info(f"Payload recebido em /consultar_solucao: {consulta.dict()}")
     session_token = iniciar_sessao()
     try:
         search_url = f"{GLPI_URL}/KnowbaseItem"
@@ -151,6 +152,42 @@ async def consultar_solucao(consulta: Consulta):
         return {"solucao": results[0]["answer"] if results and len(results) > 0 else None}
     except Exception as e:
         logger.error(f"Erro ao consultar solução: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        close_glpi_session(session_token)
+
+@app.post("/criar_ticket")
+async def criar_ticket(ticket: Ticket):
+    logger.info(f"Payload recebido em /criar_ticket: {ticket.dict()}")
+    session_token = iniciar_sessao()
+    try:
+        ticket_url = f"{GLPI_URL}/Ticket"
+        logger.info(f"Tentando criar ticket em: {ticket_url} com session_token: {session_token[:8]}****")
+        headers = {"Content-Type": "application/json", "Session-Token": session_token, "App-Token": GLPI_APP_TOKEN}
+        intent = classify_intent(ticket.problema)
+        ticket_data = {
+            "input": {
+                "name": intent["title"],
+                "content": f"Usuário: {ticket.nome}\nEmail: {ticket.email}\nProblema: {ticket.problema}",
+                "itilcategories_id": intent["category_id"],
+                "type": 1,
+                "status": 1,
+                "entities_id": 1
+            }
+        }
+        response = requests.post(ticket_url, json=ticket_data, headers=headers, timeout=10)
+        logger.info(f"Resposta do GLPI para criar ticket: Status {response.status_code}, Texto: {response.text}")
+        if response.status_code == 403:
+            logger.error(f"Erro 403: Permissão negada para {ticket_url} - Resposta: {response.text}")
+            raise HTTPException(status_code=403, detail=f"Permissão negada no GLPI. Resposta: {response.text}")
+        response.raise_for_status()
+        ticket_id = response.json().get("id")
+        return {"message": "Ticket criado!", "ticket_id": ticket_id}
+    except requests.exceptions.RequestException as e:
+        logger.error(f"Erro ao criar ticket: {str(e)} - Resposta: {getattr(e.response, 'text', 'Sem resposta')}")
+        raise HTTPException(status_code=500, detail=f"Erro ao conectar ao GLPI: {str(e)}")
+    except Exception as e:
+        logger.error(f"Erro inesperado ao criar ticket: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
     finally:
         close_glpi_session(session_token)
