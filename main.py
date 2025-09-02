@@ -3,6 +3,7 @@ from pydantic import BaseModel
 from glpi_api import GLPIClient  # Mantém o cliente GLPI
 from urllib.parse import urljoin
 import requests
+from fastapi import Request
 from dotenv import load_dotenv
 import os
 import logging
@@ -135,9 +136,15 @@ def classify_intent(texto: str):
     return CATEGORIAS.get("infraestrutura", {"category_id": 1, "title": "Infraestrutura"})
 
 # Endpoints para Tools do VAPI (sem workflow)
-@app.post("/consultar_solucao", operation_id="get_solution")
-async def consultar_solucao(consulta: Consulta):
-    logger.info(f"Payload recebido em /consultar_solucao: {consulta.dict()}")
+@app.post("/consultar_solucao")
+async def consultar_solucao(request: Request):
+    body = await request.body()  # Lê o raw body
+    logger.info(f"Raw payload recebido em /consultar_solucao: {body.decode('utf-8')}")
+    try:
+        consulta = Consulta(**await request.json())  # Tenta validar
+    except Exception as e:
+        logger.error(f"Erro de validação em /consultar_solucao: {str(e)}")
+        raise HTTPException(status_code=422, detail=str(e))
     session_token = iniciar_sessao()
     try:
         search_url = f"{GLPI_URL}/KnowbaseItem"
@@ -156,47 +163,19 @@ async def consultar_solucao(consulta: Consulta):
     finally:
         close_glpi_session(session_token)
 
-@app.post("/criar_ticket", operation_id="create_ticket")
-async def criar_ticket(ticket: Ticket):
-    logger.info(f"Payload recebido em /criar_ticket: {ticket.dict()}")
+
+@app.post("/criar_ticket")
+async def criar_ticket(request: Request):
+    body = await request.body()  # Lê o raw body
+    logger.info(f"Raw payload recebido em /criar_ticket: {body.decode('utf-8')}")
+    try:
+        ticket = Ticket(**await request.json())  # Tenta validar
+    except Exception as e:
+        logger.error(f"Erro de validação em /criar_ticket: {str(e)}")
+        raise HTTPException(status_code=422, detail=str(e))
     session_token = iniciar_sessao()
     try:
         ticket_url = f"{GLPI_URL}/Ticket"
-        logger.info(f"Tentando criar ticket em: {ticket_url} com session_token: {session_token[:8]}****")
-        headers = {"Content-Type": "application/json", "Session-Token": session_token, "App-Token": GLPI_APP_TOKEN}
-        intent = classify_intent(ticket.problema)
-        ticket_data = {
-            "input": {
-                "name": intent["title"],
-                "content": f"Usuário: {ticket.nome}\nEmail: {ticket.email}\nProblema: {ticket.problema}",
-                "itilcategories_id": intent["category_id"],
-                "type": 1,
-                "status": 1,
-                "entities_id": 1
-            }
-        }
-        response = requests.post(ticket_url, json=ticket_data, headers=headers, timeout=10)
-        logger.info(f"Resposta do GLPI para criar ticket: Status {response.status_code}, Texto: {response.text}")
-        if response.status_code == 403:
-            logger.error(f"Erro 403: Permissão negada para {ticket_url} - Resposta: {response.text}")
-            raise HTTPException(status_code=403, detail=f"Permissão negada no GLPI. Resposta: {response.text}")
-        response.raise_for_status()
-        ticket_id = response.json().get("id")
-        return {"message": "Ticket criado!", "ticket_id": ticket_id}
-    except requests.exceptions.RequestException as e:
-        logger.error(f"Erro ao criar ticket: {str(e)} - Resposta: {getattr(e.response, 'text', 'Sem resposta')}")
-        raise HTTPException(status_code=500, detail=f"Erro ao conectar ao GLPI: {str(e)}")
-    except Exception as e:
-        logger.error(f"Erro inesperado ao criar ticket: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
-    finally:
-        close_glpi_session(session_token)
-
-@app.post("/criar_ticket")
-async def criar_ticket(ticket: Ticket):
-    session_token = iniciar_sessao()
-    try:
-        ticket_url = f"{GLPI_URL}/Ticket"  # Agora GLPI_URL inclui /apirest.php
         logger.info(f"Tentando criar ticket em: {ticket_url} com session_token: {session_token[:8]}****")
         headers = {"Content-Type": "application/json", "Session-Token": session_token, "App-Token": GLPI_APP_TOKEN}
         intent = classify_intent(ticket.problema)
