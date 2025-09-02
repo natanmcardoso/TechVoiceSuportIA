@@ -1,6 +1,7 @@
 from fastapi import FastAPI, HTTPException, Header
 from pydantic import BaseModel
 from glpi_api import GLPIClient  # Mantém o cliente GLPI
+from urllib.parse import urljoin
 import requests
 import os
 import logging
@@ -99,14 +100,24 @@ class TicketRequest(BaseModel):
 
 # Funções auxiliares
 def iniciar_sessao():
-    url = f"{GLPI_URL}/apirest.php/initSession"
-    headers = {"Content-Type": "application/json", "App-Token": GLPI_APP_TOKEN}
-    payload = {"user_token": GLPI_USER_TOKEN}
+    url = f"{GLPI_URL.rstrip('/')}/initSession"  # Garante que /initSession seja anexado corretamente
+    headers = {
+        "Content-Type": "application/json",
+        "App-Token": GLPI_APP_TOKEN
+    }
+    payload = {"user_token": GLPI_USER_TOKEN}  # Tenta o método padrão
+    logger.info(f"Tentando iniciar sessão com URL: {url}, Headers: {headers}, Payload: {payload}")
     response = requests.post(url, json=payload, headers=headers, timeout=10)
+    logger.info(f"Resposta do GLPI: Status {response.status_code}, Texto: {response.text}")
     if response.status_code == 200:
-        return response.json().get("session_token")
-    logger.error(f"Erro ao iniciar sessão: {response.text}")
-    raise HTTPException(status_code=400, detail=f"Erro ao iniciar sessão: {response.text}")
+        session_data = response.json()
+        session_token = session_data.get("session_token")
+        if session_token:
+            logger.info(f"Sessão iniciada com sucesso. Token: {session_token[:8]}****")
+            return session_token
+        else:
+            raise HTTPException(status_code=400, detail="Session_token não encontrado na resposta do GLPI.")
+    raise HTTPException(status_code=response.status_code, detail=f"Erro ao iniciar sessão: {response.text}")
 
 def close_glpi_session(session_token: str):
     headers = {"App-Token": GLPI_APP_TOKEN, "Session-Token": session_token}
@@ -139,10 +150,17 @@ async def consultar_solucao(consulta: Consulta):
     finally:
         close_glpi_session(session_token)
 
+
 @app.post("/criar_ticket")
 async def criar_ticket(ticket: Ticket):
     session_token = iniciar_sessao()
     try:
+        base_url = GLPI_URL.rstrip('/')  # Remove barra final, se existir
+        if not base_url.endswith('/apirest.php'):
+            logger.warning(f"GLPI_URL ({GLPI_URL}) está incorreto. Deve terminar em /apirest.php. Usando correção temporária.")
+            base_url = f"{base_url}/apirest.php"  # Correção temporária
+        ticket_url = urljoin(base_url, "/Ticket")  # Garante o caminho correto
+        logger.info(f"Tentando criar ticket em: {ticket_url} com session_token: {session_token[:8]}****")
         headers = {"Content-Type": "application/json", "Session-Token": session_token, "App-Token": GLPI_APP_TOKEN}
         intent = classify_intent(ticket.problema)
         ticket_data = {
@@ -152,15 +170,22 @@ async def criar_ticket(ticket: Ticket):
                 "itilcategories_id": intent["category_id"],
                 "type": 1,
                 "status": 1,
-                "entities_id": 1  # Ajuste conforme sua entidade no GLPI
+                "entities_id": 1  # Verifique se essa entidade existe
             }
         }
-        response = requests.post(f"{GLPI_URL}/Ticket", json=ticket_data, headers=headers, timeout=10)
+        response = requests.post(ticket_url, json=ticket_data, headers=headers, timeout=10)
+        logger.info(f"Resposta do GLPI para criar ticket: Status {response.status_code}, Texto: {response.text}")
+        if response.status_code == 403:
+            logger.error(f"Erro 403: Permissão negada para {ticket_url} - Resposta: {response.text}")
+            raise HTTPException(status_code=403, detail=f"Permissão negada no GLPI. Resposta: {response.text}")
         response.raise_for_status()
         ticket_id = response.json().get("id")
         return {"message": "Ticket criado!", "ticket_id": ticket_id}
+    except requests.exceptions.RequestException as e:
+        logger.error(f"Erro ao criar ticket: {str(e)} - Resposta: {getattr(e.response, 'text', 'Sem resposta')}")
+        raise HTTPException(status_code=500, detail=f"Erro ao conectar ao GLPI: {str(e)}")
     except Exception as e:
-        logger.error(f"Erro ao criar ticket: {str(e)}")
+        logger.error(f"Erro inesperado ao criar ticket: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
     finally:
         close_glpi_session(session_token)
