@@ -3,9 +3,10 @@ from pydantic import BaseModel
 from glpi_api import GLPIClient  # Mantém o cliente GLPI
 from urllib.parse import urljoin
 import requests
+from dotenv import load_dotenv
 import os
 import logging
-from dotenv import load_dotenv
+
 
 # Configuração inicial
 load_dotenv()
@@ -20,6 +21,9 @@ GLPI_URL = os.getenv("GLPI_URL")
 GLPI_APP_TOKEN = os.getenv("GLPI_APP_TOKEN")
 GLPI_USER_TOKEN = os.getenv("GLPI_USER_TOKEN")
 VAPI_API_KEY = os.getenv("VAPI_API_KEY")
+
+if not all([GLPI_APP_TOKEN, GLPI_USER_TOKEN, VAPI_API_KEY]):
+    raise RuntimeError("GLPI_APP_TOKEN, GLPI_USER_TOKEN e VAPI_API_KEY são obrigatórios no .env")
 
 # Validação inicial
 if not all([GLPI_APP_TOKEN, GLPI_USER_TOKEN, VAPI_API_KEY]):
