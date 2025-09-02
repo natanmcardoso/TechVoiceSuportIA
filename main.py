@@ -168,7 +168,7 @@ async def consultar_solucao(request: Request):
         response.raise_for_status()
         results = response.json()
         solucao = results[0]["answer"] if results and len(results) > 0 else None
-        return f"solution_found_{solucao}" if solucao else "no_solution_found"
+        return f"solution_{solucao}" if solucao else "no_solution"
     except Exception as e:
         logger.error(f"Erro ao consultar solução: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -214,7 +214,9 @@ async def criar_ticket(request: Request):
             raise HTTPException(status_code=403, detail=f"Permissão negada no GLPI. Resposta: {response.text}")
         response.raise_for_status()
         ticket_id = response.json().get("id")
-        return f"success_ticket_id_{ticket_id}"  # Formato simples para o prompt reconhecer
+        retorno = f"ticket_created_{ticket_id}"  # Formato simples e consistente
+        logger.info(f"Retorno enviado: {retorno}")  # Debug
+        return retorno
     except requests.exceptions.RequestException as e:
         logger.error(f"Erro ao criar ticket: {str(e)} - Resposta: {getattr(e.response, 'text', 'Sem resposta')}")
         raise HTTPException(status_code=500, detail=f"Erro ao conectar ao GLPI: {str(e)}")
@@ -223,7 +225,6 @@ async def criar_ticket(request: Request):
         raise HTTPException(status_code=500, detail=str(e))
     finally:
         close_glpi_session(session_token)
-
 
 @app.post("/coletar_feedback")
 async def coletar_feedback(feedback: Feedback):
