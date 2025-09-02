@@ -100,12 +100,12 @@ class TicketRequest(BaseModel):
 
 # Funções auxiliares
 def iniciar_sessao():
-    url = f"{GLPI_URL.rstrip('/')}/initSession"  # Garante que /initSession seja anexado corretamente
+    url = f"{GLPI_URL}/initSession"
     headers = {
         "Content-Type": "application/json",
         "App-Token": GLPI_APP_TOKEN
     }
-    payload = {"user_token": GLPI_USER_TOKEN}  # Tenta o método padrão
+    payload = {"user_token": GLPI_USER_TOKEN}
     logger.info(f"Tentando iniciar sessão com URL: {url}, Headers: {headers}, Payload: {payload}")
     response = requests.post(url, json=payload, headers=headers, timeout=10)
     logger.info(f"Resposta do GLPI: Status {response.status_code}, Texto: {response.text}")
@@ -135,12 +135,13 @@ def classify_intent(texto: str):
 async def consultar_solucao(consulta: Consulta):
     session_token = iniciar_sessao()
     try:
+        search_url = f"{GLPI_URL}/KnowbaseItem"
         headers = {"Content-Type": "application/json", "Session-Token": session_token, "App-Token": GLPI_APP_TOKEN}
         search_data = {
             "criteria": [{"field": "12", "searchtype": "contains", "value": consulta.problema}],
             "range": "0-10"
         }
-        response = requests.get(f"{GLPI_URL}/KnowbaseItem", params=search_data, headers=headers, timeout=10)
+        response = requests.get(search_url, params=search_data, headers=headers, timeout=10)
         response.raise_for_status()
         results = response.json()
         return {"solucao": results[0]["answer"] if results and len(results) > 0 else None}
@@ -155,11 +156,7 @@ async def consultar_solucao(consulta: Consulta):
 async def criar_ticket(ticket: Ticket):
     session_token = iniciar_sessao()
     try:
-        base_url = GLPI_URL.rstrip('/')  # Remove barra final, se existir
-        if not base_url.endswith('/apirest.php'):
-            logger.warning(f"GLPI_URL ({GLPI_URL}) está incorreto. Deve terminar em /apirest.php. Usando correção temporária.")
-            base_url = f"{base_url}/apirest.php"  # Correção temporária
-        ticket_url = urljoin(base_url, "/Ticket")  # Garante o caminho correto
+        ticket_url = f"{GLPI_URL}/Ticket"  # Agora GLPI_URL inclui /apirest.php
         logger.info(f"Tentando criar ticket em: {ticket_url} com session_token: {session_token[:8]}****")
         headers = {"Content-Type": "application/json", "Session-Token": session_token, "App-Token": GLPI_APP_TOKEN}
         intent = classify_intent(ticket.problema)
@@ -170,7 +167,7 @@ async def criar_ticket(ticket: Ticket):
                 "itilcategories_id": intent["category_id"],
                 "type": 1,
                 "status": 1,
-                "entities_id": 1  # Verifique se essa entidade existe
+                "entities_id": 1
             }
         }
         response = requests.post(ticket_url, json=ticket_data, headers=headers, timeout=10)
