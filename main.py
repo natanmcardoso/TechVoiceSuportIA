@@ -168,7 +168,7 @@ async def consultar_solucao(request: Request):
         response.raise_for_status()
         results = response.json()
         solucao = results[0]["answer"] if results and len(results) > 0 else None
-        return {"content": f"Solução encontrada: {solucao}"} if solucao else {"content": "Nenhuma solução encontrada"}
+        return f"Solução encontrada: {solucao}" if solucao else "Nenhuma solução encontrada"
     except Exception as e:
         logger.error(f"Erro ao consultar solução: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -214,13 +214,13 @@ async def criar_ticket(request: Request):
             raise HTTPException(status_code=403, detail=f"Permissão negada no GLPI. Resposta: {response.text}")
         response.raise_for_status()
         ticket_id = response.json().get("id")
-        return {"content": f"Ticket criado com sucesso. ID: {ticket_id}"}  # Formato compatível com VAPI/OpenAI
+        return f"Ticket criado com sucesso. ID: {ticket_id}"  # Retorno como string pura para VAPI passar como content
     except requests.exceptions.RequestException as e:
         logger.error(f"Erro ao criar ticket: {str(e)} - Resposta: {getattr(e.response, 'text', 'Sem resposta')}")
-        return {"content": "Falha ao criar ticket: {str(e)}"}  # Retorno de falha para o assistente
+        raise HTTPException(status_code=500, detail=f"Erro ao conectar ao GLPI: {str(e)}")
     except Exception as e:
         logger.error(f"Erro inesperado ao criar ticket: {str(e)}")
-        return {"content": "Falha inesperada: {str(e)}"}
+        raise HTTPException(status_code=500, detail=str(e))
     finally:
         close_glpi_session(session_token)
 
