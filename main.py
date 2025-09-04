@@ -2,6 +2,7 @@ from fastapi import FastAPI, HTTPException, Header
 from pydantic import BaseModel
 from glpi_api import GLPIClient  # Mantém o cliente GLPI
 from urllib.parse import urljoin
+from time import time
 import requests
 import json
 from fastapi import Request
@@ -142,33 +143,58 @@ import json
 
 @app.post("/consultar_solucao")
 async def consultar_solucao(request: Request):
-    body = await request.body()
-    raw_payload = body.decode('utf-8')
-    logger.info(f"Raw payload recebido em /consultar_solucao: {raw_payload}")
     try:
-        data = json.loads(raw_payload)
-        arguments = data.get('message', {}).get('toolCalls', [{}])[0].get('function', {}).get('arguments', {})
-        consulta = Consulta(**arguments)
-    except json.JSONDecodeError as e:
-        logger.error(f"Erro ao decodificar JSON: {str(e)}")
-        raise HTTPException(status_code=422, detail="Payload JSON inválido")
-    except Exception as e:
-        logger.error(f"Erro de validação em /consultar_solucao: {str(e)}")
-        raise HTTPException(status_code=422, detail=str(e))
+        # Recebe os dados do VAPI como formulário
+        form_data = await request.form()
+        problema = form_data.get("problema", "")
 
-    session_token = iniciar_sessao()
-    try:
-        search_url = f"{GLPI_URL}/KnowbaseItem"
-        headers = {"Content-Type": "application/json", "Session-Token": session_token, "App-Token": GLPI_APP_TOKEN}
-        search_data = {
-            "criteria": [{"field": "12", "searchtype": "contains", "value": consulta.problema}],
-            "range": "0-10"
+        if not problema:
+            raise HTTPException(status_code=400, detail="O parâmetro 'problema' é obrigatório.")
+
+        # Inicia sessão no GLPI
+        session_token = iniciar_sessao()
+        if not session_token:
+            raise HTTPException(status_code=500, detail="Sessão GLPI não iniciada.")
+
+        # Configura headers para a requisição ao GLPI
+        headers = {
+            "Content-Type": "application/json",
+            "Session-Token": session_token,
+            "App-Token": GLPI_APP_TOKEN
         }
-        response = requests.get(search_url, params=search_data, headers=headers, timeout=10)
-        response.raise_for_status()
-        results = response.json()
-        solucao = results[0]["answer"] if results and len(results) > 0 else None
-        return f"Solução encontrada: {solucao}" if solucao else "Nenhuma solução encontrada"
+
+        # Parâmetros da busca no GLPI (exemplo: busca por soluções com base no problema)
+        params = {
+            "criteria": [{"field": "12", "searchtype": "contains", "value": problema}]  # Campo 12 = conteúdo da solução
+        }
+
+        # Faz a requisição ao GLPI com timeout de 10 segundos e limite de 2 tentativas
+        max_attempts = 2
+        for attempt in range(max_attempts):
+            try:
+                response = requests.post(
+                    f"{GLPI_URL}/Solution",
+                    json=params,
+                    headers=headers,
+                    timeout=10
+                )
+                response.raise_for_status()  # Levanta exceção para códigos de erro HTTP
+                break  # Sai do loop se a requisição for bem-sucedida
+            except requests.exceptions.RequestException as e:
+                if attempt == max_attempts - 1:  # Última tentativa falhou
+                    logger.error(f"Falha ao consultar solução após {max_attempts} tentativas: {str(e)}")
+                    raise HTTPException(status_code=500, detail=f"Erro ao consultar solução no GLPI: {str(e)}")
+                logger.warning(f"Tentativa {attempt + 1} falhou, tentando novamente: {str(e)}")
+                time.sleep(2)  # Aguarda 2 segundos antes de retry
+
+        # Processa a resposta do GLPI
+        data = response.json()
+        if data and "data" in data and len(data["data"]) > 0:
+            solucao = data["data"][0].get("content", "Nenhuma solução detalhada encontrada.")
+            return f"Solução encontrada: {solucao}"
+        else:
+            return "Nenhuma solução encontrada"
+
     except Exception as e:
         logger.error(f"Erro ao consultar solução: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
